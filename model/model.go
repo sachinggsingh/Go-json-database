@@ -61,8 +61,7 @@ func Stat(path string) (fi os.FileInfo, err error) {
 func New(dir string, opts *Options) (*Driver, error) {
 	dir = filepath.Clean(dir)
 
-	// ❌ Bug: you shadowed the opts parameter before
-	// ✅ Fix: copy properly
+	// Jo mene kiya tha ----Bug: you shadowed the opts parameter before
 	var options Options
 	if opts != nil {
 		options = *opts
@@ -88,12 +87,12 @@ func New(dir string, opts *Options) (*Driver, error) {
 }
 
 // Write stores a resource inside a collection
-func (d *Driver) Write(collection, resource string, v interface{}) error {
+func (d *Driver) Write(collection, resource string, v any) error {
 	if collection == "" {
-		return fmt.Errorf("Missing Collection - no place to save records")
+		return fmt.Errorf("missing collection '%s' - no place to save records", collection)
 	}
 	if resource == "" {
-		return fmt.Errorf("Missing Resource - no place to save records (no file name)")
+		return fmt.Errorf("missing resource '%s' - no place to save records (no file name)", resource)
 	}
 
 	mutex := d.GetOrCreateMutex(collection)
@@ -102,8 +101,7 @@ func (d *Driver) Write(collection, resource string, v interface{}) error {
 
 	dir := filepath.Join(d.dir, collection)
 
-	// ❌ Bug: you used os.Mkdir instead of MkdirAll
-	// ✅ Fix: MkdirAll ensures dir exists
+	// jo mene kiya tha ----Bug: you used os.Mkdir instead of MkdirAll
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
@@ -126,10 +124,10 @@ func (d *Driver) Write(collection, resource string, v interface{}) error {
 // Read loads a resource from a collection and returns JSON string
 func (d *Driver) Read(collection, resource string) (string, error) {
 	if collection == "" {
-		return "", fmt.Errorf("Missing Collection - no place to save records")
+		return "", fmt.Errorf("missing collection - no place to save records")
 	}
 	if resource == "" {
-		return "", fmt.Errorf("Missing Resource - no place to save records (no file name)")
+		return "", fmt.Errorf("missing resource - no place to save records (no file name)")
 	}
 
 	record := filepath.Join(d.dir, collection, resource)
@@ -149,7 +147,7 @@ func (d *Driver) Read(collection, resource string) (string, error) {
 // ReadAll loads all resources in a collection and returns them as JSON strings
 func (d *Driver) ReadAll(collection string) ([]string, error) {
 	if collection == "" {
-		return nil, fmt.Errorf("Missing Collection - no place to save records")
+		return nil, fmt.Errorf("missing collection - no place to save records")
 	}
 	dir := filepath.Join(d.dir, collection)
 
@@ -175,10 +173,10 @@ func (d *Driver) ReadAll(collection string) ([]string, error) {
 // Delete removes a resource from a collection
 func (d *Driver) Delete(collection, resource string) error {
 	if collection == "" {
-		return fmt.Errorf("Missing Collection - no place to save records")
+		return fmt.Errorf("missing collection - no place to save records")
 	}
 	if resource == "" {
-		return fmt.Errorf("Missing Resource - no place to save records (no file name)")
+		return fmt.Errorf("missing resource - no place to save records (no file name)")
 	}
 
 	record := filepath.Join(d.dir, collection, resource+".json")
@@ -187,8 +185,7 @@ func (d *Driver) Delete(collection, resource string) error {
 	mutex.Lock()
 	defer mutex.Unlock()
 
-	// ❌ Bug: you joined path twice
-	// ✅ Fix: just use record directly
+	// jo mene kiya tha ----Bug: you joined path twice
 	switch fi, err := Stat(record); {
 	case err != nil:
 		return err

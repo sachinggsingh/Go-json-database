@@ -82,11 +82,6 @@ func main() {
 		allUsers = append(allUsers, u)
 	}
 
-	// fmt.Println("\nAs structs:")
-	// for _, u := range allUsers {
-	// 	fmt.Printf("%+v\n", u)
-	// }
-
 	// Example: Delete one
 	// if err := db.Delete("users", "John"); err != nil {
 	// 	fmt.Println("Error", err)
