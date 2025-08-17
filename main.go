@@ -3,87 +3,93 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	model "github.com/sachinggsingh/database/model"
 )
 
-func main() {
-	dir := "./"
+var db *model.Driver
 
-	db, err := model.New(dir, nil)
+// init the database once
+func initDB() {
+	var err error
+	db, err = model.New("./", nil)
 	if err != nil {
-		fmt.Println("Error", err)
+		panic(err)
+	}
+}
+
+// Process user and save to DB
+func processUser(user model.User) model.User {
+	if err := db.Write("users", user.Name, user); err != nil {
+		fmt.Println("Error writing user:", err)
+	}
+	return user
+}
+
+// Handle POST request
+func handlePost(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	employees := []model.User{
-		{
-			Name:     "John",
-			Age:      30,
-			Email:    "j@j.com",
-			Password: "password",
-			Contact:  "1234567890",
-			Address: model.Address{
-				City:    "New York",
-				State:   "NY",
-				Country: "USA",
-				Pincode: "12345",
-			}},
-		{
-			Name:     "Jane",
-			Age:      25,
-			Email:    "j@j.com",
-			Password: "password",
-			Contact:  "1234567890",
-			Address: model.Address{
-				City:    "New York",
-				State:   "NY",
-				Country: "USA",
-				Pincode: "12345",
-			}},
-		{
-			Name:     "Sachin",
-			Age:      25,
-			Email:    "sachin.com",
-			Password: "password",
-			Contact:  "1234567890",
-			Address: model.Address{
-				City:    "New York",
-				State:   "NY",
-				Country: "USA",
-				Pincode: "12345",
-			}},
+	var dataResponse model.User
+	err := json.NewDecoder(r.Body).Decode(&dataResponse)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
-	// Write to DB
-	for _, value := range employees {
-		db.Write("users", value.Name, value)
+	// Process user (e.g. save to DB)
+	result := processUser(dataResponse)
+
+	// Return as JSON
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{"users": result})
+}
+
+// Handle GET request - return all users
+func handleGetAll(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
 
-	// Read all users in JSON format
+	// read all user records
 	records, err := db.ReadAll("users")
 	if err != nil {
-		fmt.Println("Error", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
-	// Print raw JSON strings
-	fmt.Println("Raw JSON records:")
-	for _, r := range records {
-		fmt.Println(r)
-	}
-
-	// If you need them back as structs
-	var allUsers []model.User
-	for _, jsonStr := range records {
+	var userList []model.User
+	for _, rec := range records {
 		var u model.User
-		if err := json.Unmarshal([]byte(jsonStr), &u); err != nil {
-			fmt.Println("Error:", err)
+		if err := json.Unmarshal([]byte(rec), &u); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
-		//nolint:sa4010
-		allUsers = append(allUsers, u)
+		userList = append(userList, u)
 	}
 
-	// Example: Delete one
-	// if err := db.Delete("users", "John"); err != nil {
-	// 	fmt.Println("Error", err)
-	// }
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(userList)
+}
+
+func main() {
+	// Init DB
+	initDB()
+
+	// Routes
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, "🚀 Welcome to my Go Server!")
+	})
+	http.HandleFunc("/process", handlePost)
+	http.HandleFunc("/users", handleGetAll)
+
+	fmt.Println("Listening on port 8080")
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		panic(err)
+	}
 }
