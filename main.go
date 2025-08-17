@@ -77,6 +77,34 @@ func handleGetAll(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(userList)
 }
 
+// Handle Delete request - Delete teh user
+func handleDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodDelete {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var dataResponse model.User
+	err := json.NewDecoder(r.Body).Decode(&dataResponse)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	err = db.Delete("users", dataResponse.Name)
+	if err != nil {
+		http.Error(w, "Error deleting user: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	// sending the other user
+	json.NewEncoder(w).Encode(map[string]any{
+		"message": "User deleted successfully",
+		"user":    dataResponse,
+	})
+}
+
 func main() {
 	// Init DB
 	initDB()
@@ -87,6 +115,7 @@ func main() {
 	})
 	http.HandleFunc("/process", handlePost)
 	http.HandleFunc("/users", handleGetAll)
+	http.HandleFunc("/delete", handleDelete)
 
 	fmt.Println("Listening on port 8080")
 	if err := http.ListenAndServe(":8080", nil); err != nil {
